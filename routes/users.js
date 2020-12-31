@@ -129,6 +129,7 @@ router.post(
       res.status(500).send(error);
     });
 })*/
+
 router.route("/add").post((req, res) => {
   //const { username, email, numTel, password } = req.body;
   const username = req.body.username;
@@ -147,75 +148,62 @@ router.route("/add").post((req, res) => {
     .then(() => res.json("User added!"))
     .catch((err) => res.status(400).json("Error: " + err));
 });
-router.post(
-  "/signup",
-  [
-    check("username", "Please Enter a Valid Username").not().isEmpty(),
-    check("email", "Please enter a valid email").isEmail(),
-    check("numTel", "Please Enter a Valid phoneNumber").isLength({
-      min: 8,
-    }),
-    check("password", "Please enter a valid password").isLength({
-      min: 6,
-    }),
-  ],
-  cors(),
-  async (req, res) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
+
+router.post("/signup", async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      errors: errors.array(),
+    });
+  }
+
+  const { username, email, numTel, password } = req.body;
+  try {
+    let civil = await citoyen.findOne({
+      email,
+    });
+    if (civil) {
       return res.status(400).json({
-        errors: errors.array(),
+        msg: "User Already Exists",
       });
     }
 
-    const { username, email, numTel, password } = req.body;
-    try {
-      let civil = await citoyen.findOne({
-        email,
-      });
-      if (civil) {
-        return res.status(400).json({
-          msg: "User Already Exists",
+    civil = new citoyen({
+      username,
+      email,
+      numTel,
+      password,
+    });
+
+    const salt = await bcrypt.genSalt(10);
+    civil.password = await bcrypt.hash(password, salt);
+
+    await civil.save();
+
+    const payload = {
+      civil: {
+        id: civil.id,
+      },
+    };
+
+    jwt.sign(
+      payload,
+      "randomString",
+      {
+        expiresIn: 10000,
+      },
+      (err, token) => {
+        if (err) throw err;
+        console.log(token);
+        res.status(200).json({
+          token,
         });
       }
-
-      civil = new citoyen({
-        username,
-        email,
-        numTel,
-        password,
-      });
-
-      const salt = await bcrypt.genSalt(10);
-      civil.password = await bcrypt.hash(password, salt);
-
-      await civil.save();
-
-      const payload = {
-        civil: {
-          id: civil.id,
-        },
-      };
-
-      jwt.sign(
-        payload,
-        "randomString",
-        {
-          expiresIn: 10000,
-        },
-        (err, token) => {
-          if (err) throw err;
-          console.log(token);
-          res.status(200).json({
-            token,
-          });
-        }
-      );
-    } catch (err) {
-      console.log(err.message);
-      res.status(500).send(err.message);
-    }
+    );
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).send(err.message);
   }
-);
+});
 
 module.exports = router;
