@@ -7,8 +7,8 @@ var mongoose = require("mongoose");
 const { check, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
 var jwt = require("jsonwebtoken");
-const cors = require("cors");
-
+/* const cors = require("cors");
+ */
 router.use(bodyParser.json());
 /* GET home page. */
 router.get("/", function (req, res, next) {
@@ -33,6 +33,13 @@ router.get("/all", function (req, res, next) {
     });
 });
 
+router.route("/:id").get((req, res) => {
+  citoyen
+    .findById(req.params.id)
+    .then((civil) => res.json(civil))
+    .catch((err) => res.status(400).json("Error: " + err));
+});
+
 /*router.get("/me", auth, async (req, res) => {
   try {
     // request.user is getting fetched from Middleware after token authentication
@@ -51,7 +58,8 @@ router.post(
       min: 6,
     }),
   ],
-  cors(),
+  // cors(),
+
   async (req, res) => {
     const errors = validationResult(req);
 
@@ -91,9 +99,14 @@ router.post(
         },
         (err, token) => {
           if (err) throw err;
-          res.status(200).json({
-            token,
-          });
+
+          res
+            .setHeader("SET-COOKIE", "Authorization=" + token + "; HttpOnly")
+            .status(200)
+            .json({
+              token,
+              user: civil,
+            });
         }
       );
     } catch (err) {
@@ -129,25 +142,6 @@ router.post(
       res.status(500).send(error);
     });
 })*/
-
-router.route("/add").post((req, res) => {
-  //const { username, email, numTel, password } = req.body;
-  const username = req.body.username;
-  const numTel = req.body.numTel;
-  const email = req.body.email;
-  const password = req.body.password;
-  civil = new citoyen({
-    username,
-    numTel,
-    email,
-    password,
-  });
-
-  civil
-    .save()
-    .then(() => res.json("User added!"))
-    .catch((err) => res.status(400).json("Error: " + err));
-});
 
 router.post("/signup", async (req, res) => {
   const errors = validationResult(req);
@@ -195,15 +189,51 @@ router.post("/signup", async (req, res) => {
       (err, token) => {
         if (err) throw err;
         console.log(token);
-        res.status(200).json({
-          token,
-        });
+        res
+          .setHeader("SET-COOKIE", "Authorization=" + token + "; HttpOnly")
+          .status(200)
+          .json({
+            token,
+            user: civil,
+          });
       }
     );
   } catch (err) {
     console.log(err.message);
     res.status(500).send(err.message);
   }
+});
+
+const updateCitoyen = async (req, res) => {
+  const { id } = req.params;
+  const { username, email, numTel, password } = req.body;
+
+  if (!mongoose.Types.ObjectId.isValid(id))
+    return res.status(404).send(`No User with id: ${id}`);
+
+  const updatedCitoyen = { username, email, numTel, password, _id: id };
+
+  await citoyen.findByIdAndUpdate(id, updatedCitoyen, { new: true });
+
+  res.json(updatedCitoyen);
+};
+router.patch("/:id", updateCitoyen);
+
+router.route("/update/id").post((req, res) => {
+  citoyen
+    .findById(req.params.id)
+    .then((civil) => {
+      civil.username = req.body.userName;
+      civil.email = req.body.userAddress;
+      civil.numTel = req.body.userPhone;
+      civil.password = req.body.userPassword;
+
+      civil
+        .save()
+        .then(() => res.json("Citoyen updated!"))
+        .catch((err) => res.status(400).json("Error: " + err));
+    })
+    .catch((err) => res.status(400).json("Error: " + err));
 });
 
 module.exports = router;
