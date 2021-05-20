@@ -2,7 +2,8 @@ var express = require("express");
 var router = express.Router();
 const bodyParser = require("body-parser");
 var citoyen = require("../Models/citoyen");
-//var auth = require("../middleware/auth");
+var civil = require("../routes/users");
+var auth = require("../middleware/auth");
 var mongoose = require("mongoose");
 const { check, validationResult } = require("express-validator");
 const bcrypt = require("bcryptjs");
@@ -40,7 +41,7 @@ router.route("/:id").get((req, res) => {
     .catch((err) => res.status(400).json("Error: " + err));
 });
 
-/*router.get("/me", auth, async (req, res) => {
+router.get("/me", auth, async (req, res) => {
   try {
     // request.user is getting fetched from Middleware after token authentication
     const civil = await citoyen.findById(req.civil.id);
@@ -48,7 +49,7 @@ router.route("/:id").get((req, res) => {
   } catch (e) {
     res.send({ message: "Error in Fetching user" });
   }
-});*/
+});
 
 router.post(
   "/login",
@@ -167,6 +168,69 @@ router.post("/signup", async (req, res) => {
       email,
       numTel,
       password,
+    });
+
+    const salt = await bcrypt.genSalt(10);
+    civil.password = await bcrypt.hash(password, salt);
+
+    await civil.save();
+
+    const payload = {
+      civil: {
+        id: civil.id,
+      },
+    };
+
+    jwt.sign(
+      payload,
+      "randomString",
+      {
+        expiresIn: 10000,
+      },
+      (err, token) => {
+        if (err) throw err;
+        console.log(token);
+        res
+          .setHeader("SET-COOKIE", "Authorization=" + token + "; HttpOnly")
+          .status(200)
+          .json({
+            token,
+            user: civil,
+          });
+      }
+    );
+  } catch (err) {
+    console.log(err.message);
+    res.status(500).send(err.message);
+  }
+});
+
+router.post("/subscribe", async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      errors: errors.array(),
+    });
+  }
+
+  const { name, label, secteur, description, password, role } = req.body;
+  try {
+    let civil = await citoyen.findOne({
+      label,
+    });
+    if (civil) {
+      return res.status(400).json({
+        msg: "User Already Exists",
+      });
+    }
+
+    civil = new citoyen({
+      name,
+      label,
+      secteur,
+      description,
+      password,
+      role,
     });
 
     const salt = await bcrypt.genSalt(10);

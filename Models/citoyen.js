@@ -9,6 +9,16 @@ var civilSchema = mongoose.Schema(
       type: String,
       required: true,
     },
+    name: { type: String },
+    label: { type: String },
+    secteur: { type: String },
+    description: { type: String },
+    role: {
+      type: String,
+      enum: ["admin", "user", "representant"],
+      default: "user",
+    },
+    active: Boolean,
   },
   { timestamps: true }
 );
