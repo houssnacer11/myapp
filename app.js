@@ -8,7 +8,7 @@ const cors = require("cors");
 var mongoose = require("mongoose");
 //const url = "mongodb+srv://OmarJarray95:loulou95@scrummy0-po95q.mongodb.net/scrummy?retryWrites=true";
 const url = "mongodb://localhost:27017/sopradb";
-mongoose.connect(url, { useNewUrlParser: true });
+mongoose.connect(url, { useNewUrlParser: true, useUnifiedTopology: true });
 var mongo = mongoose.connection;
 
 mongo.on("connected", () => {
