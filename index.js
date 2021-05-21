@@ -5,7 +5,6 @@ import next from "next";
 import { urlencoded, json } from "body-parser";
 import cookieParser from "cookie-parser";
 import passport from "passport";
-import { utils } from "./auth";
 import router from "./router";
 import { connectToDatabase } from "./database/connection";
 import { initialiseAuthentication, utils } from "./auth";
